@@ -27,7 +27,25 @@ pip install biopython pandas
 To run the script, use the following command:
 
 ```
-python /usr2/people/anoonan/scripts/GitHub/sangerBLAST/sangerBLAST.py <input_directory> [--output_dir <output_directory>] [--output <output_file>] [--consensus_fasta <consensus_fasta>] [--trimmed_fasta <trimmed_fasta>] [--verbose] [--web_blast] [--trim_Ns]
+sangerBLAST.py [-h] [--output OUTPUT] [--consensus_fasta CONSENSUS_FASTA] [--trimmed_fasta TRIMMED_FASTA] [--verbose] [--web_blast] [--trim_Ns] [--output_dir OUTPUT_DIR] input_directory
+
+Process Sanger sequencing data, align reads, generate consensus sequences, and perform BLAST.
+
+positional arguments:
+  input_directory       Directory containing .ab1 files
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --output OUTPUT       Output file for BLAST results
+  --consensus_fasta CONSENSUS_FASTA
+                        Output file for consensus sequences in FASTA format
+  --trimmed_fasta TRIMMED_FASTA
+                        Output file for trimmed consensus sequences in FASTA format
+  --verbose             Enable verbose output
+  --web_blast           BLAST against NCBI database instead of local BLAST
+  --trim_Ns             Trim large chunks of Ns before BLAST
+  --output_dir OUTPUT_DIR
+                        Directory to place output files
 ```
 
 ### Arguments
@@ -38,9 +56,9 @@ python /usr2/people/anoonan/scripts/GitHub/sangerBLAST/sangerBLAST.py <input_dir
 | `--output_dir`      | Directory to save output files                                                 | `.`                               |
 | `--consensus_fasta` | Output file for consensus sequences in FASTA format                            | `consensus_sequences.fasta`       |
 | `--trimmed_fasta`   | Output file for trimmed consensus sequences in FASTA format                    | `trimmed_consensus_sequences.fasta` |
-| `--verbose`         | Enable verbose output                                                          |                                   |
-| `--web_blast`       | BLAST against NCBI database instead of local BLAST                             |                                   |
-| `--trim_Ns`         | Trim large chunks of Ns before BLAST                                           |                                   |
+| `--verbose`         | Enable verbose output                                                          |         `False`                          |
+| `--web_blast`       | BLAST against NCBI database instead of local BLAST                             |     `False`                              |
+| `--trim_Ns`         | Trim large chunks of Ns before BLAST                                           |      `False`                             |
 
 ### Input
 
