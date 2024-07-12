@@ -25,6 +25,7 @@ def parse_arguments():
     parser.add_argument('--web_blast', action='store_true', help='BLAST against NCBI database instead of local BLAST')
     parser.add_argument('--trim_Ns', action='store_true', help='Trim large chunks of Ns before BLAST')
     parser.add_argument('--output_dir', type=str, default='.', help='Directory to place output files')
+    parser.add_argument('--input_type', choices=['ab1', 'fasta'], default='ab1', help='Type of input data (default: ab1)')
     return parser.parse_args()
 
 def get_sequence_from_ab1(file_path, verbose=False):
@@ -89,7 +90,7 @@ def trim_large_chunks_of_ns(sequence, min_ns_stretch=10):
     trimmed_sequence = sequence[largest_gap[0]:largest_gap[1]]
     return trimmed_sequence
 
-def blast_sequence(sequence, blastdb=None, web_blast=False, verbose=False):
+def blast_sequence(sequence, output_dir, blastdb=None, web_blast=False, verbose=False):
     if web_blast:
         try:
             if verbose:
@@ -105,17 +106,17 @@ def blast_sequence(sequence, blastdb=None, web_blast=False, verbose=False):
     else:
         if verbose:
             print("\nPerforming local BLAST search...")
-        query_file = "query.fasta"
+        query_file_path = os.path.join(output_dir, "query.fasta")
         output_file = "blast_output.xml"
-        write_fasta(sequence, query_file)  # Use the new function to write the FASTA file
-        blastn_cline = NcbiblastnCommandline(query=query_file, db=blastdb, evalue=0.001, outfmt=5, out=output_file)
+        write_fasta(sequence, query_file_path)  # Use the new function to write the FASTA file
+        blastn_cline = NcbiblastnCommandline(query=query_file_path, db=blastdb, evalue=0.001, outfmt=5, out=output_file)
         stdout, stderr = blastn_cline()
         blast_record = None
         if os.path.exists(output_file):
             with open(output_file) as result_handle:
                 blast_record = NCBIXML.read(result_handle)
             os.remove(output_file)
-        os.remove(query_file)
+        os.remove(query_file_path)
         return blast_record
 
 def parse_blast_results(blast_record, verbose=False):
@@ -188,12 +189,17 @@ def main():
     
     args = parse_arguments()
     input_directory = args.input_directory
+    output_dir = args.output_dir
     output_file = os.path.join(args.output_dir, args.output)
     consensus_fasta = os.path.join(args.output_dir, args.consensus_fasta)
     trimmed_fasta = os.path.join(args.output_dir, args.trimmed_fasta)
     web_blast = args.web_blast
     trim_Ns = args.trim_Ns
     verbose = args.verbose
+    input_type = args.input_type
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     if verbose:
         print("\n========== Configuration ==========")
@@ -203,54 +209,62 @@ def main():
         print(f"Trimmed FASTA file: {trimmed_fasta}")
         print(f"BLAST against NCBI: {web_blast}")
         print(f"Trim large chunks of Ns: {trim_Ns}")
+        print(f"Input type: {input_type}")
         print("====================================\n")
 
-    file_list = get_files_from_directory(input_directory, verbose=verbose)
-    sequences = parse_filenames(file_list, verbose=verbose)
+    if input_type == 'ab1':
+        file_list = [file for file in os.listdir(input_directory) if file.endswith('.ab1')]
+        sequences = parse_filenames(file_list, verbose=verbose)
 
-    print("\nProcessing", len(sequences), "samples...")
-    
-    consensus_sequences = {}
-    consensus_records = []
-    trimmed_records = []
-    for sample_id, seqs in sequences.items():
-        fwd_file = seqs['fwd']
-        rev_file = seqs['rev']
-        if fwd_file and rev_file:
-            fwd_seq = get_sequence_from_ab1(os.path.join(input_directory, fwd_file), verbose=verbose)
-            rev_seq = get_sequence_from_ab1(os.path.join(input_directory, rev_file), verbose=verbose)
-            if fwd_seq and rev_seq:
-                consensus_seq = align_sequences(fwd_seq, rev_seq, verbose=verbose)
-                if consensus_seq:
-                    consensus_sequences[sample_id] = consensus_seq
-                    consensus_length = len(consensus_seq)
-                    consensus_records.append(SeqRecord(consensus_seq, id=sample_id, description=f"Consensus sequence length={consensus_length}"))
-                    trimmed_seq = trim_large_chunks_of_ns(str(consensus_seq))
-                    trimmed_length = len(trimmed_seq)
-                    trimmed_records.append(SeqRecord(Seq(trimmed_seq), id=sample_id, description=f"Trimmed consensus sequence length={trimmed_length}"))
+        print("\nProcessing", len(sequences), "samples...")
 
-    # Write consensus sequences to FASTA files
-    if consensus_records:
-        with open(consensus_fasta, 'w') as fasta_output:
-            SeqIO.write(consensus_records, fasta_output, 'fasta')
-        if verbose:
-            print(f"\nConsensus sequences saved to {consensus_fasta}")
+        consensus_sequences = {}
+        consensus_records = []
+        trimmed_records = []
+        for sample_id, seqs in sequences.items():
+            fwd_file = seqs['fwd']
+            rev_file = seqs['rev']
+            if fwd_file and rev_file:
+                fwd_seq = get_sequence_from_ab1(os.path.join(input_directory, fwd_file), verbose=verbose)
+                rev_seq = get_sequence_from_ab1(os.path.join(input_directory, rev_file), verbose=verbose)
+                if fwd_seq and rev_seq:
+                    consensus_seq = align_sequences(fwd_seq, rev_seq, verbose=verbose)
+                    if consensus_seq:
+                        consensus_sequences[sample_id] = consensus_seq
+                        consensus_length = len(consensus_seq)
+                        consensus_records.append(SeqRecord(consensus_seq, id=sample_id, description=f"Consensus sequence length={consensus_length}"))
+                        trimmed_seq = trim_large_chunks_of_ns(str(consensus_seq))
+                        trimmed_length = len(trimmed_seq)
+                        trimmed_records.append(SeqRecord(Seq(trimmed_seq), id=sample_id, description=f"Trimmed consensus sequence length={trimmed_length}"))
 
-    if trimmed_records:
-        with open(trimmed_fasta, 'w') as fasta_output:
-            SeqIO.write(trimmed_records, fasta_output, 'fasta')
-        if verbose:
-            print(f"\nTrimmed consensus sequences saved to {trimmed_fasta}")
+        # Write consensus sequences to FASTA files
+        if consensus_records:
+            with open(consensus_fasta, 'w') as fasta_output:
+                SeqIO.write(consensus_records, fasta_output, 'fasta')
+            if verbose:
+                print(f"\nConsensus sequences saved to {consensus_fasta}")
+
+        if trimmed_records:
+            with open(trimmed_fasta, 'w') as fasta_output:
+                SeqIO.write(trimmed_records, fasta_output, 'fasta')
+            if verbose:
+                print(f"\nTrimmed consensus sequences saved to {trimmed_fasta}")
+
+    elif input_type == 'fasta':
+        # Assume input_directory is a fasta file containing multiple sequences
+        sequences = SeqIO.parse(input_directory, 'fasta')
+        consensus_sequences = {seq.id: seq.seq for seq in sequences}
+        # No consensus sequence or trimming step needed
 
     full_blast_results = pd.DataFrame()
     for db_name, blastdb in blast_dbs.items():
         if verbose:
             print(f"\nPerforming BLAST search against {db_name}")
         blast_results = []
-        for sample_id, seq_record in zip(consensus_sequences.keys(), trimmed_records if trim_Ns else consensus_records):
+        for sample_id, sequence in consensus_sequences.items():
             if verbose:
                 print(f"\nPerforming BLAST for sample: {sample_id}")
-            blast_record = blast_sequence(seq_record.seq, blastdb=blastdb, web_blast=web_blast, verbose=verbose)
+            blast_record = blast_sequence(sequence, output_dir, blastdb=blastdb, web_blast=web_blast, verbose=verbose)
             if blast_record:
                 top_hits = parse_blast_results(blast_record, verbose=verbose)
                 for hit in top_hits:

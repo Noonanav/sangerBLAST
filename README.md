@@ -1,9 +1,11 @@
-# Sanger Sequencing Data Processor
+# Sanger Sequencing Data and 16S Sequence Processor
 
 This script processes Sanger sequencing data in a 2-step process: 
 
 1. Paired forward and reverse reads are aligned using the `pairwise2.align.globalms` function to generate consensus sequences
 2. A BLAST search against specified databases (either local and web-based) and top matches are reported in the output file.
+
+This script can also handle existing 16S sequences in FASTA format using `--input_type fasta`
 
 ## Requirements
 
@@ -27,7 +29,7 @@ pip install biopython pandas
 To run the script, use the following command:
 
 ```
-sangerBLAST.py [-h] [--output OUTPUT] [--consensus_fasta CONSENSUS_FASTA] [--trimmed_fasta TRIMMED_FASTA] [--verbose] [--web_blast] [--trim_Ns] [--output_dir OUTPUT_DIR] input_directory
+sangerBLAST.py [-h] [--output OUTPUT] [--consensus_fasta CONSENSUS_FASTA] [--trimmed_fasta TRIMMED_FASTA] [--verbose] [--web_blast] [--trim_Ns] [--output_dir OUTPUT_DIR] [--input_type {ab1,fasta}] input_directory
 
 Process Sanger sequencing data, align reads, generate consensus sequences, and perform BLAST.
 
@@ -46,26 +48,30 @@ optional arguments:
   --trim_Ns             Trim large chunks of Ns before BLAST
   --output_dir OUTPUT_DIR
                         Directory to place output files
+  --input_type {ab1,fasta}
+                        Type of input data (default: ab1)
 ```
 
 ### Arguments
 
 | Argument            | Description                                                                    | Default                           |
 |---------------------|--------------------------------------------------------------------------------|-----------------------------------|
-| `--output`          | Output file for BLAST results                                                  | `blast_results.csv`               |
-| `--output_dir`      | Directory to save output files                                                 | `.`                               |
-| `--consensus_fasta` | Output file for consensus sequences in FASTA format                            | `consensus_sequences.fasta`       |
+| `--output`          | Output file for BLAST results                                                  | `blast_results.csv`                 |
+| `--output_dir`      | Directory to save output files                                                 | `.`                                 |
+| `--consensus_fasta` | Output file for consensus sequences in FASTA format                            | `consensus_sequences.fasta`         |
 | `--trimmed_fasta`   | Output file for trimmed consensus sequences in FASTA format                    | `trimmed_consensus_sequences.fasta` |
-| `--verbose`         | Enable verbose output                                                          |         `False`                          |
-| `--web_blast`       | BLAST against NCBI database instead of local BLAST                             |     `False`                              |
-| `--trim_Ns`         | Trim large chunks of Ns before BLAST                                           |      `False`                             |
+| `--verbose`         | Enable verbose output                                                          |         `False`                     |
+| `--web_blast`       | BLAST against NCBI database instead of local BLAST                             |     `False`                         |
+| `--trim_Ns`         | Trim large chunks of Ns before BLAST                                           |      `False`                        |
+| `--input_type`      | Type of input data (options: ab1 / fasta)                                      | `ab1`                               |    
 
 ### Input
 
 The script assumes the following input format:
 
-| Input Type            | Description                                                                                      |
+| Input            | Description                                                                                      |
 |-----------------------|--------------------------------------------------------------------------------------------------|
+| **Input Type**        | Set to `fasta` when blasting defined sequences or `ab1` (default) for Sanger read input                                    |
 | **Input Directory**   | The input directory should contain `.ab1` files, which are the raw Sanger sequencing files.      |
 | **Filename Format**   | The script expects the filenames to follow a specific pattern: `<prefix1>_<prefix2>_<sampleID>_<orientation>_<optional_suffix>.ab1`  |
 |             | `prefix1` / `prefix2`: Any string of characters (e.g., project name, date).                                             |
@@ -152,7 +158,7 @@ Alignment uses the `pairwise2.align.globalms` function from the Biopython librar
 
 These parameters are adjusted to be more lenient, allowing for a more flexible alignment that can tolerate mismatches and gaps better.
 
-## Example
+## Example 1
 
 To process Sanger sequencing data in the directory `data` and save the results to `results.csv`:
 
@@ -164,6 +170,21 @@ This command will:
 
 - Read `.ab1` files from the `data` directory.
 - Generate consensus sequences.
+- Perform local BLAST searches against the specified databases.
+- Save the BLAST results to `output_directory/results.csv`.
+- Save the consensus sequences to `output_directory/consensus_sequences.fasta` and `output_directory/trimmed_sequences.fasta`.
+
+## Example 2
+
+To process ASVs from FASTA file and save the results to `results.csv`:
+
+```
+python /usr2/people/anoonan/scripts/GitHub/sangerBLAST/sangerBLAST.py asv_seqs.fasta --output results.csv --output_dir output_directory --verbose
+```
+
+This command will:
+
+- Import ASV sequences
 - Perform local BLAST searches against the specified databases.
 - Save the BLAST results to `output_directory/results.csv`.
 - Save the consensus sequences to `output_directory/consensus_sequences.fasta` and `output_directory/trimmed_sequences.fasta`.
