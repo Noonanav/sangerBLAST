@@ -29,7 +29,7 @@ pip install biopython pandas
 To run the script, use the following command:
 
 ```
-sangerBLAST.py [-h] [--output OUTPUT] [--consensus_fasta CONSENSUS_FASTA] [--trimmed_fasta TRIMMED_FASTA] [--verbose] [--web_blast] [--trim_Ns] [--output_dir OUTPUT_DIR] [--input_type {ab1,fasta}] input_directory
+sangerBLAST.py [-h] [--output OUTPUT] [--consensus_fasta CONSENSUS_FASTA] [--trimmed_fasta TRIMMED_FASTA] [--verbose] [--web_blast] [--blast_Ns] [--output_dir OUTPUT_DIR] [--input_type {ab1,fasta}] input_directory
 
 Process Sanger sequencing data, align reads, generate consensus sequences, and perform BLAST.
 
@@ -45,7 +45,7 @@ optional arguments:
                         Output file for trimmed consensus sequences in FASTA format
   --verbose             Enable verbose output
   --web_blast           BLAST against NCBI database instead of local BLAST
-  --trim_Ns             Trim large chunks of Ns before BLAST
+  --blast_Ns            BLAST concensus sequences with Ns
   --output_dir OUTPUT_DIR
                         Directory to place output files
   --input_type {ab1,fasta}
@@ -62,7 +62,7 @@ optional arguments:
 | `--trimmed_fasta`   | Output file for trimmed consensus sequences in FASTA format                    | `trimmed_consensus_sequences.fasta` |
 | `--verbose`         | Enable verbose output                                                          |         `False`                     |
 | `--web_blast`       | BLAST against NCBI database instead of local BLAST                             |     `False`                         |
-| `--trim_Ns`         | Trim large chunks of Ns before BLAST                                           |      `False`                        |
+| `--blast_Ns`         | BLAST concensus sequences with Ns                                           |      `False`                        |
 | `--input_type`      | Type of input data (options: ab1 / fasta)                                      | `ab1`                               |    
 
 ### Input
@@ -101,11 +101,11 @@ The location of these output files can be controlled using the `--output_dir` ar
 
 The script uses the following local BLAST databases for sequence alignment:
 
-| Database Name      | Path                                                                                                       |
-|--------------------|------------------------------------------------------------------------------------------------------------|
-| `16SMicrobial`     | `/usr2/people/kuehl/databases/16SMicrobial/16SMicrobial`                                                   |
-| `CORAL_2024FEB`    | `/usr2/people/gtl/data/Isolate_Sanger_Checking/Collection_data/CORAL_2024FEB.fasta_db`                     |
-| `Genome_16s`       | `/usr2/people/gtl/data/Isolate_Sanger_Checking/Collection_data/Genome.16s.fasta_db`                        |
+| Database Name      | Path                                                                                                       |  Description  |
+|--------------------|------------------------------------------------------------------------------------------------------------|------|
+| `16SMicrobial`     | `/usr2/people/kuehl/databases/16SMicrobial/16SMicrobial`                                                   | Sequences from NCBI database  |
+| `CORAL_2024FEB`    | `/usr2/people/gtl/data/Isolate_Sanger_Checking/Collection_data/CORAL_2024FEB.fasta_db`                     |  Internal 16S sequences from Sanger data   |
+| `Genome_16s`       | `/usr2/people/gtl/data/Isolate_Sanger_Checking/Collection_data/Genome.16s.fasta_db`                        |  Internal 16S seqeunces from genome assemblies   |
 
 
 ## Script Workflow

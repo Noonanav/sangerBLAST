@@ -7,6 +7,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Blast import NCBIWWW, NCBIXML
 from Bio.Blast.Applications import NcbiblastnCommandline
+from Bio.Application import ApplicationError
 import time
 
 blast_dbs = {
@@ -23,7 +24,7 @@ def parse_arguments():
     parser.add_argument('--trimmed_fasta', type=str, default='trimmed_consensus_sequences.fasta', help='Output file for trimmed consensus sequences in FASTA format')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output', default=True)
     parser.add_argument('--web_blast', action='store_true', help='BLAST against NCBI database instead of local BLAST')
-    parser.add_argument('--trim_Ns', action='store_true', help='Trim large chunks of Ns before BLAST')
+    parser.add_argument('--blast_Ns', action='store_true', help='BLAST concensus sequences with Ns')
     parser.add_argument('--output_dir', type=str, default='.', help='Directory to place output files')
     parser.add_argument('--input_type', choices=['ab1', 'fasta'], default='ab1', help='Type of input data (default: ab1)')
     return parser.parse_args()
@@ -107,28 +108,46 @@ def blast_sequence(sequence, output_dir, blastdb=None, web_blast=False, verbose=
         if verbose:
             print("\nPerforming local BLAST search...")
         query_file_path = os.path.join(output_dir, "query.fasta")
-        output_file = "blast_output.xml"
-        write_fasta(sequence, query_file_path)  # Use the new function to write the FASTA file
-        blastn_cline = NcbiblastnCommandline(query=query_file_path, db=blastdb, evalue=0.001, outfmt=5, out=output_file)
-        stdout, stderr = blastn_cline()
-        blast_record = None
-        if os.path.exists(output_file):
-            with open(output_file) as result_handle:
-                blast_record = NCBIXML.read(result_handle)
-            os.remove(output_file)
-        os.remove(query_file_path)
-        return blast_record
+        output_file = os.path.join(output_dir, "blast_output.xml")
+        try:
+            write_fasta(sequence, query_file_path)  # Use the new function to write the FASTA file
+            blastn_cline = NcbiblastnCommandline(query=query_file_path, db=blastdb, evalue=0.001, outfmt=5, out=output_file)
+            stdout, stderr = blastn_cline()
+            blast_record = None
+            if os.path.exists(output_file):
+                with open(output_file) as result_handle:
+                    blast_record = NCBIXML.read(result_handle)
+                os.remove(output_file)
+            os.remove(query_file_path)
+            return blast_record
+        except ApplicationError as e:
+            print(f"ApplicationError during BLAST: {e}")
+            if os.path.exists(query_file_path):
+                os.remove(query_file_path)
+            if os.path.exists(output_file):
+                os.remove(output_file)
+            return None
+        except Exception as e:
+            print(f"Error during BLAST: {e}")
+            if os.path.exists(query_file_path):
+                os.remove(query_file_path)
+            if os.path.exists(output_file):
+                os.remove(output_file)
+            return None
 
 def parse_blast_results(blast_record, verbose=False):
     top_hits = []
     if blast_record:
         if verbose:
             print("\nParsing BLAST results...")
-        for alignment in blast_record.alignments[:5]:
+        hits_count = 0
+        for alignment in blast_record.alignments:
             for hsp in alignment.hsps:
+                if hits_count >= 5:
+                    break
                 # Calculate percent identity and query coverage
                 percent_identity = (hsp.identities / hsp.align_length) * 100
-                query_coverage = (hsp.align_length / blast_record.query_length) * 100
+                query_coverage = ((hsp.query_end - hsp.query_start + 1) / blast_record.query_length) * 100
 
                 hit = {
                     'Target': alignment.title,
@@ -140,6 +159,7 @@ def parse_blast_results(blast_record, verbose=False):
                     'Query Coverage': query_coverage
                 }
                 top_hits.append(hit)
+                hits_count += 1
                 if verbose:
                     print(f"\nTarget: {hit['Target']}")
                     print(f"Length: {hit['Length']}")
@@ -149,6 +169,8 @@ def parse_blast_results(blast_record, verbose=False):
                     print(f"Percent Identity: {hit['Percent Identity']:.2f}%")
                     print(f"Query Coverage: {hit['Query Coverage']:.2f}%")
                     print('-' * 60)
+            if hits_count >= 5:
+                break
     return top_hits
 
 def parse_filenames(file_list, verbose=False):
@@ -194,7 +216,7 @@ def main():
     consensus_fasta = os.path.join(args.output_dir, args.consensus_fasta)
     trimmed_fasta = os.path.join(args.output_dir, args.trimmed_fasta)
     web_blast = args.web_blast
-    trim_Ns = args.trim_Ns
+    blast_Ns = args.blast_Ns
     verbose = args.verbose
     input_type = args.input_type
 
@@ -208,7 +230,7 @@ def main():
         print(f"Consensus FASTA file: {consensus_fasta}")
         print(f"Trimmed FASTA file: {trimmed_fasta}")
         print(f"BLAST against NCBI: {web_blast}")
-        print(f"Trim large chunks of Ns: {trim_Ns}")
+        print(f"BLAST concensus sequence with Ns: {blast_Ns}")
         print(f"Input type: {input_type}")
         print("====================================\n")
 
@@ -230,12 +252,15 @@ def main():
                 if fwd_seq and rev_seq:
                     consensus_seq = align_sequences(fwd_seq, rev_seq, verbose=verbose)
                     if consensus_seq:
-                        consensus_sequences[sample_id] = consensus_seq
                         consensus_length = len(consensus_seq)
                         consensus_records.append(SeqRecord(consensus_seq, id=sample_id, description=f"Consensus sequence length={consensus_length}"))
                         trimmed_seq = trim_large_chunks_of_ns(str(consensus_seq))
                         trimmed_length = len(trimmed_seq)
                         trimmed_records.append(SeqRecord(Seq(trimmed_seq), id=sample_id, description=f"Trimmed consensus sequence length={trimmed_length}"))
+                        if blast_Ns:
+                            consensus_sequences[sample_id] = consensus_seq
+                        else:
+                            consensus_sequences[sample_id] = Seq(trimmed_seq)
 
         # Write consensus sequences to FASTA files
         if consensus_records:
