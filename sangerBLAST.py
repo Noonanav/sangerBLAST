@@ -149,25 +149,44 @@ def parse_blast_results(blast_record, verbose=False):
                 percent_identity = (hsp.identities / hsp.align_length) * 100
                 query_coverage = ((hsp.query_end - hsp.query_start + 1) / blast_record.query_length) * 100
 
+                # Calculate alignment length manually
+                alignment_length = hsp.query_end - hsp.query_start + 1
+
                 hit = {
                     'Target': alignment.title,
-                    'Length': alignment.length,
+                    'Query Length': blast_record.query_length,
+                    'Target Length': alignment.length,
+                    'Alignment Length': alignment_length,
                     'Score': hsp.score,
                     'E-value': hsp.expect,
                     'Identity': hsp.identities,
                     'Percent Identity': percent_identity,
-                    'Query Coverage': query_coverage
+                    'Query Coverage': query_coverage,
+                    'Mismatches': hsp.align_length - hsp.identities,
+                    'Gap Openings': hsp.gaps,
+                    'Query Start': hsp.query_start,
+                    'Query End': hsp.query_end,
+                    'Target Start': hsp.sbjct_start,
+                    'Target End': hsp.sbjct_end
                 }
                 top_hits.append(hit)
                 hits_count += 1
                 if verbose:
                     print(f"\nTarget: {hit['Target']}")
-                    print(f"Length: {hit['Length']}")
+                    print(f"Query Length: {hit['Query Length']}")
+                    print(f"Target Length: {hit['Target Length']}")
+                    print(f"Alignment Length: {hit['Alignment Length']}")
                     print(f"Score: {hit['Score']}")
                     print(f"E-value: {hit['E-value']}")
                     print(f"Identity: {hit['Identity']}")
                     print(f"Percent Identity: {hit['Percent Identity']:.2f}%")
                     print(f"Query Coverage: {hit['Query Coverage']:.2f}%")
+                    print(f"Mismatches: {hit['Mismatches']}")
+                    print(f"Gap Openings: {hit['Gap Openings']}")
+                    print(f"Query Start: {hit['Query Start']}")
+                    print(f"Query End: {hit['Query End']}")
+                    print(f"Target Start: {hit['Target Start']}")
+                    print(f"Target End: {hit['Target End']}")
                     print('-' * 60)
             if hits_count >= 5:
                 break
@@ -230,7 +249,7 @@ def main():
         print(f"Consensus FASTA file: {consensus_fasta}")
         print(f"Trimmed FASTA file: {trimmed_fasta}")
         print(f"BLAST against NCBI: {web_blast}")
-        print(f"BLAST concensus sequence with Ns: {blast_Ns}")
+        print(f"BLAST consensus sequence with Ns: {blast_Ns}")
         print(f"Input type: {input_type}")
         print("====================================\n")
 

@@ -96,6 +96,29 @@ The script generates several output files based on the specified or default argu
 
 The location of these output files can be controlled using the `--output_dir` argument. If `--output_dir` is not specified, the output files will be saved in the current directory.
 
+#### BLAST Results Output Table
+
+The following table describes the columns present in the BLAST results output CSV file:
+
+| Column Name       | Description                                                                 |
+|-------------------|-----------------------------------------------------------------------------|
+| Query             | The identifier of the query sequence from the input FASTA file.             |
+| Database          | The name of the BLAST database used for the search.                         |
+| Query Length      | The length of the query sequence.                                           |
+| Target Length     | The length of the target sequence.                                          |
+| Alignment Length  | The length of the alignment between the query and target sequences.         |
+| Score             | The score of the alignment. Higher scores indicate better alignments.       |
+| E-value           | The expect value of the alignment. Lower values indicate more significant alignments. |
+| Identity          | The number of identical matches in the alignment.                           |
+| Percent Identity  | The percentage of identical matches in the alignment.                       |
+| Query Coverage    | The percentage of the query sequence that is covered by the alignment.      |
+| Mismatches        | The number of mismatched bases in the alignment.                            |
+| Gap Openings      | The number of gaps in the alignment.                                        |
+| Query Start       | The starting position of the alignment on the query sequence.               |
+| Query End         | The ending position of the alignment on the query sequence.                 |
+| Target Start      | The starting position of the alignment on the target sequence.              |
+| Target End        | The ending position of the alignment on the target sequence.                |
+
 
 ### Databases
 
